@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_expense_app/new_expense.dart';
 import 'package:flutter_expense_app/widgets/expenses_list.dart';
+import 'package:flutter_expense_app/widgets/chart.dart';
 
 import 'models/expense.dart';
 
@@ -26,26 +28,69 @@ class _ExpensesState extends State<Expenses> {
     ),
   ];
 
+  void _addExpense(Expense newExpense) {
+    setState(() {
+      _registeredExpenses.add(newExpense);
+    });
+  }
+
+  void _removeExpense(Expense expense) {
+    final expenseIdx = _registeredExpenses.indexOf(expense);
+    setState(() {
+      _registeredExpenses.remove(expense);
+    });
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text("Expense deleted."),
+        duration: const Duration(seconds: 7),
+        action: SnackBarAction(
+            label: "Undo",
+            onPressed: () {
+              setState(() {
+                _registeredExpenses.insert(expenseIdx, expense);
+              });
+            }),
+      ),
+    );
+  }
+
+  void _openAddExpenseOverlay() {
+    showModalBottomSheet(
+        isScrollControlled: true,
+        context: context,
+        builder: (ctx) => NewExpense(onAddExpense: _addExpense));
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-            colors: [Colors.deepPurple.shade500, Colors.deepPurpleAccent],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight),
+    Widget mainContent = Center(
+      child: Text("No Expenses Found"),
+    );
+
+    if (_registeredExpenses.isNotEmpty) {
+      mainContent = ExpensesList(
+        expenses: _registeredExpenses,
+        onRemoveExpense: _removeExpense,
+      );
+    }
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Flutter Expense Tracker"),
+        actions: [
+          IconButton(
+            onPressed: _openAddExpenseOverlay,
+            icon: const Icon(Icons.add),
+          )
+        ],
       ),
-      child: Column(
+      body: Column(
         children: [
-          const Text(
-            "Chart",
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 30,
-              fontWeight: FontWeight.bold,
-            ),
+          Chart(expenses: _registeredExpenses),
+          Expanded(
+            child: mainContent,
           ),
-          Expanded(child: ExpensesList(expenses: _registeredExpenses)),
         ],
       ),
     );
